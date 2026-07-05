@@ -1,0 +1,107 @@
+version: "3.9"
+
+services:
+
+  # ── Shared infrastructure ──────────────────────────────────────────────────
+
+  ntp:
+    build: ./systems/ntp
+    container_name: bitrx-ntp
+    ports:
+      - "8001:8001"
+    environment:
+      - SPEED_MULTIPLIER=60       # 1 real second = 60 simulated seconds (1 min = 1 sim hour)
+      - SIM_START=2024-06-10T08:00:00Z
+    networks:
+      - bitrx
+    restart: unless-stopped
+
+  crm:
+    build: ./systems/crm
+    container_name: bitrx-crm
+    ports:
+      - "8002:8002"
+    volumes:
+      - crm-data:/data
+    networks:
+      - bitrx
+    restart: unless-stopped
+
+  news-website:
+    build: ./systems/news-website
+    container_name: bitrx-news
+    ports:
+      - "8003:8003"
+    volumes:
+      - news-data:/data
+    environment:
+      - NTP_URL=http://ntp:8001
+      - DB_PATH=/data/news.db
+    depends_on:
+      - ntp
+    networks:
+      - bitrx
+    restart: unless-stopped
+
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: bitrx-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    networks:
+      - bitrx
+    restart: unless-stopped
+
+  # ── Agents (add your team's agents here) ───────────────────────────────────
+
+  # journalist:
+  #   build: ./agents/journalist
+  #   container_name: bitrx-journalist
+  #   environment:
+  #     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+  #     - NTP_URL=http://ntp:8001
+  #     - NEWS_URL=http://news-website:8003
+  #     - CHROMA_URL=http://chroma:8000
+  #   depends_on:
+  #     - ntp
+  #     - news-website
+  #     - chroma
+  #   networks:
+  #     - bitrx
+
+  # regulator:
+  #   build: ./agents/regulator
+  #   container_name: bitrx-regulator
+  #   environment:
+  #     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+  #     - NTP_URL=http://ntp:8001
+  #     - CRM_URL=http://crm:8002
+  #     - NEWS_URL=http://news-website:8003
+  #     - CHROMA_URL=http://chroma:8000
+  #   depends_on:
+  #     - ntp
+  #     - crm
+  #     - news-website
+  #     - chroma
+  #   networks:
+  #     - bitrx
+
+  # ── Other teams' services will be added below ───────────────────────────────
+  # social-network:
+  # email:
+  # company-website:
+  # quality-lab:
+  # staff-portal:
+  # customer-support:
+  # internal-chat:
+
+volumes:
+  crm-data:
+  news-data:
+  chroma-data:
+
+networks:
+  bitrx:
+    driver: bridge
