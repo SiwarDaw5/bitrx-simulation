@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   # ── Shared infrastructure ──────────────────────────────────────────────────
@@ -10,19 +8,8 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - SPEED_MULTIPLIER=60       # 1 real second = 60 simulated seconds (1 min = 1 sim hour)
+      - SPEED_MULTIPLIER=60
       - SIM_START=2024-06-10T08:00:00Z
-    networks:
-      - bitrx
-    restart: unless-stopped
-
-  crm:
-    build: ./systems/crm
-    container_name: bitrx-crm
-    ports:
-      - "8002:8002"
-    volumes:
-      - crm-data:/data
     networks:
       - bitrx
     restart: unless-stopped
@@ -54,41 +41,39 @@ services:
       - bitrx
     restart: unless-stopped
 
-  # ── Agents (add your team's agents here) ───────────────────────────────────
+  # ── Agents ─────────────────────────────────────────────────────────────────
 
-  # journalist:
-  #   build: ./agents/journalist
-  #   container_name: bitrx-journalist
-  #   environment:
-  #     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-  #     - NTP_URL=http://ntp:8001
-  #     - NEWS_URL=http://news-website:8003
-  #     - CHROMA_URL=http://chroma:8000
-  #   depends_on:
-  #     - ntp
-  #     - news-website
-  #     - chroma
-  #   networks:
-  #     - bitrx
+  journalist:
+    build:
+      context: .
+      dockerfile: agents/journalist/Dockerfile
+    container_name: bitrx-journalist
+    env_file:
+      - .env
+    depends_on:
+      - ntp
+      - news-website
+      - chroma
+    networks:
+      - bitrx
+    restart: unless-stopped
 
   # regulator:
-  #   build: ./agents/regulator
+  #   build:
+  #     context: .
+  #     dockerfile: agents/regulator/Dockerfile
   #   container_name: bitrx-regulator
-  #   environment:
-  #     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-  #     - NTP_URL=http://ntp:8001
-  #     - CRM_URL=http://crm:8002
-  #     - NEWS_URL=http://news-website:8003
-  #     - CHROMA_URL=http://chroma:8000
+  #   env_file:
+  #     - .env
   #   depends_on:
   #     - ntp
-  #     - crm
   #     - news-website
   #     - chroma
   #   networks:
   #     - bitrx
+  #   restart: unless-stopped
 
-  # ── Other teams' services will be added below ───────────────────────────────
+  # ── Other teams' services ───────────────────────────────────────────────────
   # social-network:
   # email:
   # company-website:
@@ -98,7 +83,6 @@ services:
   # internal-chat:
 
 volumes:
-  crm-data:
   news-data:
   chroma-data:
 
