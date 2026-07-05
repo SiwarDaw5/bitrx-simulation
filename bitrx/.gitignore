@@ -25,6 +25,7 @@ venv/
 
 # VS Code
 .vscode/
+.idea
 
 # OS
 .DS_Store
