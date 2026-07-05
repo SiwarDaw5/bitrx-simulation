@@ -2,7 +2,6 @@ import os
 import httpx
 from base.tool_base import ToolBase, ToolSchema, ToolResult
 
-NEWS_URL = os.getenv("NEWS_URL", "http://news-website:8003")
 
 
 class SearchNewsTool(ToolBase):
@@ -45,6 +44,8 @@ class SearchNewsTool(ToolBase):
         )
 
     def run(self, **kwargs) -> ToolResult:
+
+        NEWS_URL = os.getenv("NEWS_URL", "http://localhost:8003")  # ← moved here
         query = kwargs["query"]
         limit = kwargs.get("limit", 5)
 

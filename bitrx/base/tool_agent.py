@@ -13,6 +13,7 @@ from services.tool_executor import ToolExecutor
 class ReActConfig:
     max_steps: int = 6
     max_answer_length: int = 600
+    system_hint: str = ""
 
 
 def _parse_json(text: str) -> dict | None:
@@ -93,7 +94,10 @@ class ToolAgent(AgentBase):
             messages.append(AIMessage(content=raw))
             # ------------------------------------------------------------------
 
-
+            print(f"\n{'─' * 50}")
+            print(f"  Step {step}")
+            print(f"{'─' * 50}")
+            print(f"  LLM raw output: {raw[:200]}")
 
             # ----------------- Parse the LLM's JSON response -----------------------
             parsed = _parse_json(raw)
@@ -119,6 +123,10 @@ class ToolAgent(AgentBase):
             # ----------------- FINAL ANSWER Guardrail: length limit on the final answer -----------------------
             action = parsed.get("action", "")
 
+            print(f"  Action : {action}")
+            print(f"  Args   : {parsed.get('args', {})}")
+
+
             if action == "final_answer":
                 answer = str(parsed.get("answer", ""))
                 if len(answer) > self._config.max_answer_length:
@@ -127,7 +135,9 @@ class ToolAgent(AgentBase):
                     step, "OBSERVE", None,
                     f"FINAL ANSWER: {answer[:120]}"
                 )
+                print(f"\n  ✓ FINAL ANSWER")
                 return answer
+
             # ------------------------------------------------------------------
 
 
@@ -142,11 +152,17 @@ class ToolAgent(AgentBase):
             # ----------------- OBSERVE: inject result back into the conversation -----------------------
             if result.ok:
                 observation = f"Tool '{tool_name}' returned: {result.value}"
+                # ── ADD THIS ────────────────────────────────────
+                print(f"  ✓ Tool OK  : {str(result.value)[:200]}")
+                # ────────────────────────────────────────────────
             else:
                 observation = (
                     f"Tool '{tool_name}' failed with error: {result.error}. "
                     "Report this error to the user in your final_answer."
                 )
+                # ── ADD THIS ────────────────────────────────────
+                print(f"  ✗ Tool FAIL: {result.error}")
+                # ────────────────────────────────────────────────
             self._executor.log_trace(step, "OBSERVE", None, observation[:200])
             messages.append(HumanMessage(content=observation))
             # ------------------------------------------------------------------

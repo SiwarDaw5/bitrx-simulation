@@ -2,7 +2,6 @@ import os
 import httpx
 from base.tool_base import ToolBase, ToolSchema, ToolResult
 
-NEWS_URL = os.getenv("NEWS_URL", "http://news-website:8003")
 
 
 class PublishArticleTool(ToolBase):
@@ -60,6 +59,8 @@ class PublishArticleTool(ToolBase):
         )
 
     def run(self, **kwargs) -> ToolResult:
+
+        NEWS_URL = os.getenv("NEWS_URL", "http://localhost:8003")
         title = kwargs["title"]
         body = kwargs["body"]
         category = kwargs["category"]
