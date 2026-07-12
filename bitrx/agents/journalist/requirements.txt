@@ -6,7 +6,7 @@ google-generativeai>=0.7.2
 
 # Chroma vector store
 langchain-chroma>=0.1.4
-chromadb>=0.5.3
+chromadb>=0.6.0
 
 # Text splitting
 langchain-text-splitters>=0.2.4

@@ -59,9 +59,23 @@ class DocumentStore(RetrieverBase):
         self._store.add_documents(documents)
 
     def retrieve(self, query: str, top_k: int = 4) -> list[RetrievalResult]:
-        raw = self._store.similarity_search_with_score(query, k=top_k)
-        return [RetrievalResult(document=doc, score=score) for doc, score in raw]
+        print(f"[DEBUG] query={query!r} top_k={top_k!r} type={type(top_k)}")
+        try:
+            raw = self._store.similarity_search_with_relevance_scores(query, k=int(top_k))
+            return [RetrievalResult(document=doc, score=float(score)) for doc, score in raw]
+        except Exception as e:
+            print(f"[DocumentStore] retrieve error: {e}")
+            import traceback
+            traceback.print_exc()  # ← add this to see the full stack trace
+            try:
+                docs = self._store.similarity_search(query, k=int(top_k))
+                return [RetrievalResult(document=doc, score=1.0) for doc in docs]
+            except Exception as e2:
+                print(f"[DocumentStore] fallback failed: {e2}")
+                traceback.print_exc()  # ← and this
+                return []
 
+            
     def retrieve_mmr(self, query: str, top_k: int = 4) -> list[RetrievalResult]:
         docs = self._store.max_marginal_relevance_search(query, k=top_k)
         return [RetrievalResult(document=doc, score=1.0) for doc in docs]

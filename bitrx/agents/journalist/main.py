@@ -9,8 +9,11 @@ Make sure:
     2. GEMINI_API_KEY is set in your .env file
     3. Knowledge docs are in agents/journalist/knowledge/
 """
-
+import sys
 import os
+
+# Add project root to Python path so all modules are found
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from dotenv import load_dotenv
 from agents.journalist.journalist_agent import JournalistAgent, JournalistConfig
 

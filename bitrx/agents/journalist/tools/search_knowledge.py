@@ -72,7 +72,7 @@ class SearchKnowledgeTool(ToolBase):
 
     def run(self, **kwargs) -> ToolResult:
         query = kwargs["query"]
-        top_k = min(kwargs.get("top_k", 3), 6)
+        top_k = min(int(kwargs.get("top_k", 3)), 6)
 
         if self._store is None:
             return ToolResult(
@@ -104,7 +104,7 @@ class SearchKnowledgeTool(ToolBase):
                     f"{content[:500]}"
                     f"{'...' if len(content) > 500 else ''}\n"
                 )
-
+            print(lines)
             return ToolResult(value="\n".join(lines))
 
         except Exception as e:
