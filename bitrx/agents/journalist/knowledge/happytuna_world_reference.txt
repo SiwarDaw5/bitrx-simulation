@@ -39,7 +39,6 @@ CEO (Chief Executive Officer):
 - Makes strategic decisions, public statements, crisis response decisions
 - Can approve recalls, declare emergencies, allocate resources
 - Contact via BitriX Mail: ceo@happytuna.com
-- Publishes statements on the Company Website
 - Key person to interview during a crisis
 
 COO (Chief Operations Officer):
@@ -64,7 +63,6 @@ Regulator (Ministry of Health / Financial Authority):
 - Ensures company follows food safety laws
 - Can launch investigations, issue fines, demand remediation
 - Contact via BitriX Mail: regulator@ministry.gov
-- Reads the News Portal and Company Website
 - Will act if public health risk is confirmed
 
 Customers:
@@ -100,12 +98,6 @@ BitriX Mail:
 - Every agent has an email address, inbox, sent folder, contact list
 - Primary channel for journalist to contact sources and request interviews
 - Regulator uses it to contact the company officially
-
-Company Website:
-- Official company communication channel
-- Contains press releases, product information, recall notices
-- CEO publishes official statements here
-- Journalist should check here before publishing company claims
 
 CRM (Customer Relationship Management):
 - Internal company system — not directly accessible to journalist

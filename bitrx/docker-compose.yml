@@ -76,7 +76,6 @@ services:
   # ── Other teams' services ───────────────────────────────────────────────────
   # social-network:
   # email:
-  # company-website:
   # quality-lab:
   # staff-portal:
   # customer-support:

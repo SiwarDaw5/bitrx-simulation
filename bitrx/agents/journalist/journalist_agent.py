@@ -10,7 +10,6 @@ from services.rag_pipeline import RagPipeline, RagConfig
 from agents.journalist.tools.publish_article import PublishArticleTool
 from agents.journalist.tools.search_news import SearchNewsTool
 from agents.journalist.tools.search_knowledge import SearchKnowledgeTool
-from agents.journalist.tools.read_website import ReadWebsiteTool
 from agents.journalist.tools.send_email import SendEmailTool
 from agents.journalist.tools.post_social import PostSocialTool
 from agents.journalist.prompts import JOURNALIST_SYSTEM_HINT, JOURNALIST_DESCRIPTION
@@ -56,7 +55,7 @@ class JournalistAgent(ToolAgent):
     Framework: LangChain (via ToolAgent + ReAct loop)
     Memory: Chroma DB (food safety knowledge base)
     Tools: publish_article, search_news, search_knowledge,
-           read_website, send_email, post_social
+         send_email, post_social
 
     Usage:
         config = JournalistConfig.from_env()
@@ -109,7 +108,6 @@ class JournalistAgent(ToolAgent):
         # --- Register all tools ---
         executor.register(SearchKnowledgeTool(document_store=document_store))
         executor.register(SearchNewsTool())
-        executor.register(ReadWebsiteTool())
         executor.register(SendEmailTool())
         executor.register(PublishArticleTool())
         executor.register(PostSocialTool())
