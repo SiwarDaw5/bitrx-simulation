@@ -11,6 +11,7 @@ from agents.journalist.tools.publish_article import PublishArticleTool
 from agents.journalist.tools.search_news import SearchNewsTool
 from agents.journalist.tools.search_knowledge import SearchKnowledgeTool
 from agents.journalist.tools.send_email import SendEmailTool
+from agents.journalist.tools.read_email import ReadEmailTool
 from agents.journalist.tools.post_social import PostSocialTool
 from agents.journalist.prompts import JOURNALIST_SYSTEM_HINT, JOURNALIST_DESCRIPTION
 
@@ -109,6 +110,7 @@ class JournalistAgent(ToolAgent):
         executor.register(SearchKnowledgeTool(document_store=document_store))
         executor.register(SearchNewsTool())
         executor.register(SendEmailTool())
+        executor.register(ReadEmailTool())
         executor.register(PublishArticleTool())
         executor.register(PostSocialTool())
 
