@@ -4,7 +4,6 @@ Agentic AI course project. An AI agent acts as CEO of HappyTuna — a fictional 
 
 This repository belongs to **Team 4** and contains:
 - **Journalist Agent** — investigates and publishes news (LangChain + Chroma DB) ✅
-- **Board Agent** — monitors CEO performance and governs the company (LangChain + Chroma DB) ✅
 - **Regulator Agent** — enforces food safety laws — coming soon
 - **NTP System** — shared simulation clock for all agents ✅
 - **News Website** — The Daily Catch, external news feed ✅
@@ -76,8 +75,13 @@ cp .env.example .env
 # 3. Start all systems
 docker compose up --build ntp news-website chroma
 
-# 4. In a second terminal — run the journalist agent
-py -m agents.journalist.main
+# 4. In a second terminal — start the event generator (other team's repo)
+cd customer-influencer-agents
+docker compose up event-generator
+
+# 5. In a third terminal — run the journalist listener
+cd bitrx
+py -m agents.journalist.listener
 ```
 
 ---
@@ -89,16 +93,18 @@ py -m agents.journalist.main
 | NTP | http://localhost:8001 | http://ntp:8001 | Simulation clock |
 | News Website | http://localhost:8003 | http://news-website:8003 | The Daily Catch news feed |
 | Chroma DB | http://localhost:8000 | http://chroma:8000 | Agent RAG memory |
+| Event Generator | http://localhost:8006 | http://event-generator:8000 | Crisis event feed (other team) |
 | BrightTweets | http://localhost:3005 | http://social-network:3005 | Social network (other team) |
 | Email | http://localhost:8010 | http://email:8010 | Email system (other team) |
 
 ### Quick health checks
 ```
-http://localhost:8001/time          → NTP current sim time
-http://localhost:8001/docs          → NTP API docs
-http://localhost:8003               → The Daily Catch news site
-http://localhost:8003/docs          → News Website API docs
+http://localhost:8001/time              → NTP current sim time
+http://localhost:8001/docs             → NTP API docs
+http://localhost:8003                  → The Daily Catch news site
+http://localhost:8003/docs             → News Website API docs
 http://localhost:8000/api/v2/heartbeat → Chroma DB health
+http://localhost:8006/health           → Event generator health
 ```
 
 ---
@@ -139,9 +145,7 @@ A shared clock for the entire BitriX world. All agents use this instead of real 
 ```
 
 ### Advance time for testing
-```bash
-# Skip forward 1 simulated day (86400 seconds)
-# PowerShell:
+```powershell
 Invoke-RestMethod -Method POST -Uri "http://localhost:8001/time/advance" `
   -ContentType "application/json" `
   -Body '{"seconds": 86400}'
@@ -213,7 +217,7 @@ conn.close()
 
 ## 3. Journalist Agent
 
-An autonomous AI agent that investigates crisis events and publishes news to The Daily Catch. Built on **LangChain** using a **ReAct** loop with **Chroma DB** for background knowledge.
+An autonomous AI agent that investigates crisis events and publishes news to The Daily Catch. Built on **LangChain** using a **ReAct** loop with **Chroma DB** for background knowledge. Listens to the event generator for incoming press events automatically.
 
 ### Personality
 
@@ -230,7 +234,7 @@ An autonomous AI agent that investigates crisis events and publishes news to The
 ### Agent flow
 
 ```
-World event detected
+Event Generator fires a "press" event
         ↓
 1. search_knowledge  →  Query Chroma DB for background context
         ↓
@@ -244,7 +248,7 @@ World event detected
         ↓
 6. post_social       →  Share headline on BrightTweets
         ↓
-7. final_answer      →  Done
+7. final_answer      →  Waits for next event...
 ```
 
 ### Tools
@@ -268,24 +272,32 @@ World event detected
 | `happytuna_world_reference.txt` | All agents, all systems, crisis scenario |
 
 ### How to run
-```bash
-docker compose up ntp news-website chroma
-py -m agents.journalist.main
 
-Event > salmonella detected at HappyTuna Production Line A
+```bash
+# Terminal 1 — start Docker systems
+docker compose up ntp news-website chroma
+
+# Terminal 2 — start event generator (other team's repo)
+cd customer-influencer-agents
+docker compose up event-generator
+
+# Terminal 3 — start journalist listener
+cd bitrx
+py -m agents.journalist.listener
+```
+
+### Fire a test event
+```cmd
+# Inject a single event
+curl -X POST http://localhost:8006/emit -H "Content-Type: application/json" -d "{\"tag\":\"press\",\"text\":\"HappyTuna salmonella confirmed - 3 consumers hospitalized\"}"
+
+# Or run the full scripted feed (5 events, Day 1 to Day 10)
+curl -X POST http://localhost:8006/replay
 ```
 
 ---
 
-## 4. Board Agent
-
-Monitors CEO performance during the crisis and governs strategic decisions. Built on **LangChain + Chroma DB**.
-
-Coming soon — under active development.
-
----
-
-## 5. Regulator Agent
+## 4. Regulator Agent
 
 Enforces food safety laws, opens investigations, issues fines. Built on **NeMo + Chroma DB**.
 
@@ -300,7 +312,7 @@ Copy `.env.example` to `.env`:
 ```dotenv
 # Required
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_EMBEDDING_MODEL=models/text-embedding-004
+GEMINI_EMBEDDING_MODEL=models/gemini-embedding-001
 
 # Local development (outside Docker)
 NTP_URL=http://localhost:8001
@@ -310,6 +322,7 @@ CHROMA_HOST=localhost
 CHROMA_PORT=8000
 SOCIAL_URL=http://localhost:3005
 EMAIL_URL=http://localhost:8010
+EVENT_GENERATOR_URL=http://localhost:8006
 
 # Docker (uncomment when running agents inside containers)
 # NTP_URL=http://ntp:8001
@@ -317,16 +330,13 @@ EMAIL_URL=http://localhost:8010
 # CHROMA_HOST=chroma
 # SOCIAL_URL=http://social-network:3005
 # EMAIL_URL=http://email:8010
+# EVENT_GENERATOR_URL=http://event-generator:8000
 
 # Journalist agent
 JOURNALIST_MODEL=gemini-2.5-flash
 JOURNALIST_TEMPERATURE=0.2
 JOURNALIST_MAX_STEPS=12
 
-# Board agent (coming soon)
-# BOARD_MODEL=gemini-2.5-flash
-# BOARD_TEMPERATURE=0.1
-# BOARD_MAX_STEPS=10
 
 # Regulator agent (coming soon)
 # REGULATOR_MODEL=gemini-2.5-flash
@@ -359,7 +369,9 @@ bitrx/
 │   ├── journalist/
 │   │   ├── journalist_agent.py
 │   │   ├── prompts.py
-│   │   ├── main.py
+│   │   ├── main.py          # Manual run (for testing)
+│   │   ├── listener.py      # Event-driven run (production)
+│   │   ├── event_client.py  # SSE client from event generator team
 │   │   ├── requirements.txt
 │   │   ├── Dockerfile
 │   │   ├── knowledge/
@@ -374,7 +386,6 @@ bitrx/
 │   │       ├── send_email.py
 │   │       ├── read_email.py
 │   │       └── post_social.py
-│   ├── board/               # Under development
 │   └── regulator/           # Coming soon
 │
 ├── systems/

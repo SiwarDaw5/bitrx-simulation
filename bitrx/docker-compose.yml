@@ -50,6 +50,12 @@ services:
     container_name: bitrx-journalist
     env_file:
       - .env
+    environment:
+      - EVENT_GENERATOR_URL=http://event-generator:8000
+      - NTP_URL=http://ntp:8001
+      - NEWS_URL=http://news-website:8003
+      - CHROMA_HOST=chroma
+      - SOCIAL_URL=http://social-network:3005
     depends_on:
       - ntp
       - news-website

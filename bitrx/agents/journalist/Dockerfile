@@ -17,4 +17,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8080
 
-CMD ["python", "-m", "agents.journalist.main"]
+CMD ["python", "-m", "agents.journalist.listener"]
