@@ -14,19 +14,14 @@ class PostSocialTool(ToolBase):
                 "Use this AFTER publishing an article to drive traffic to it, "
                 "or to share a breaking development before the full article is ready. "
                 "Keep posts short, punchy, and impactful. "
-                "Include the article URL if one has been published."
-            ),
+                "Do NOT include any links or URLs in the content. "
+                "Use hashtags only."            ),
             parameters={
                 "type": "object",
                 "properties": {
                     "content": {
                         "type": "string",
-                        "description": "The post text — maximum 280 characters.",
-                    },
-                    "article_id": {
-                        "type": "string",
-                        "description": "Optional. The ID of the published article to link to.",
-                    },
+                        "description": "The post text — maximum 280 characters. No links or URLs. End with relevant hashtags like #HappyTuna #FoodSafety #Recall",                    },
                     "tags": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -54,7 +49,6 @@ class PostSocialTool(ToolBase):
     def run(self, **kwargs) -> ToolResult:
         SOCIAL_URL = os.getenv("SOCIAL_URL", "http://localhost:3005")
         content = kwargs["content"]
-        article_id = kwargs.get("article_id", "")
         tags = kwargs.get("tags", [])
 
         if len(content) > 280:
