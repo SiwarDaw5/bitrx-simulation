@@ -25,7 +25,7 @@ import httpx
 
 def get_sim_time() -> str:
     try:
-        r = httpx.get("http://ntp:8001/time", timeout=3)  # use localhost:8001 locally
+        r = httpx.get("http://ntp:8001/time", timeout=3)
         return r.json()["sim_time"]
     except Exception:
         from datetime import datetime, timezone
@@ -53,7 +53,7 @@ httpx.post("http://news-website:8003/articles", json={
     "title": "BREAKING: Salmonella detected at HappyTuna Production Line A",
     "body": "Full article text...",
     "author": "Journalist Agent",
-    "category": "breaking",   # breaking | investigative | update | opinion
+    "category": "breaking",
     "tags": ["HappyTuna", "salmonella", "recall"],
     "source_urls": []
 })
@@ -61,7 +61,7 @@ httpx.post("http://news-website:8003/articles", json={
 
 ---
 
-## Quick Start
+## Quick Start — Our systems only
 
 ```bash
 # 1. Clone the repo
@@ -72,30 +72,46 @@ cd bitrx
 cp .env.example .env
 # Edit .env — add your GEMINI_API_KEY
 
-# 3. Start all systems
-docker compose up --build ntp news-website chroma
+# 3. Start all our systems + journalist agent
+docker compose up --build
+```
 
-# 4. In a second terminal — start the event generator (other team's repo)
-cd customer-influencer-agents
-docker compose up event-generator
+This starts: NTP, News Website, Chroma DB, and the Journalist agent.
 
-# 5. In a third terminal — run the journalist listener
+---
+
+## Quick Start — Full simulation (all teams)
+
+```bash
+# Terminal 1 — our systems
 cd bitrx
-py -m agents.journalist.listener
+docker compose up --build
+
+# Terminal 2 — event generator + social network (Team 3 repo)
+cd customer-influencer-agents
+docker compose up event-generator social-network
+
+# Terminal 3 — internal messaging (Team 2 repo)
+cd bitrix-internal-actors
+docker compose up postgres redis zookeeper kafka internal-messaging
+
+# Fire test events (any terminal)
+curl -X POST http://localhost:8006/replay
 ```
 
 ---
 
 ## Services
 
-| Service | Local URL | Docker URL | Description |
-|---|---|---|---|
-| NTP | http://localhost:8001 | http://ntp:8001 | Simulation clock |
-| News Website | http://localhost:8003 | http://news-website:8003 | The Daily Catch news feed |
-| Chroma DB | http://localhost:8000 | http://chroma:8000 | Agent RAG memory |
-| Event Generator | http://localhost:8006 | http://event-generator:8000 | Crisis event feed (other team) |
-| BrightTweets | http://localhost:3005 | http://social-network:3005 | Social network (other team) |
-| Email | http://localhost:8010 | http://email:8010 | Email system (other team) |
+| Service | Local URL | Docker URL | Owner | Description |
+|---|---|---|---|---|
+| NTP | http://localhost:8001 | http://ntp:8001 | **Us** | Simulation clock |
+| News Website | http://localhost:8003 | http://news-website:8003 | **Us** | The Daily Catch |
+| Chroma DB | http://localhost:8000 | http://chroma:8000 | **Us** | Agent RAG memory |
+| Event Generator | http://localhost:8006 | http://event-generator:8000 | Team 3 | Crisis event feed |
+| BrightTweets | http://localhost:3005 | http://social-network:3005 | Team 3 | Social network |
+| Internal Chat | http://localhost:8080 | http://internal-messaging:8080 | Team 2 | Messaging system |
+| Email | http://localhost:8010 | http://email:8010 | TBD | Email system |
 
 ### Quick health checks
 ```
@@ -105,6 +121,7 @@ http://localhost:8003                  → The Daily Catch news site
 http://localhost:8003/docs             → News Website API docs
 http://localhost:8000/api/v2/heartbeat → Chroma DB health
 http://localhost:8006/health           → Event generator health
+http://localhost:8080/health           → Internal chat health
 ```
 
 ---
@@ -138,7 +155,7 @@ A shared clock for the entire BitriX world. All agents use this instead of real 
 {
   "sim_time": "2024-06-10T09:23:00+00:00",
   "sim_time_human": "Monday, 10 June 2024 09:23:00 UTC",
-  "real_time": "2026-06-28T10:01:00+00:00",
+  "real_time": "2026-08-18T10:01:00+00:00",
   "day_of_week": "Monday",
   "speed_multiplier": 60.0
 }
@@ -201,23 +218,20 @@ An external news site where the Journalist agent publishes articles. All agents 
 - Auto-refreshes every 15 seconds
 - Simulation clock display
 
-### Delete an article (admin/testing)
+### Delete articles (admin/testing)
 ```bash
-docker exec -it bitrx-news python3 -c "
-import sqlite3
-conn = sqlite3.connect('/data/news.db')
-conn.execute(\"DELETE FROM articles WHERE title LIKE '%keyword%'\")
-conn.commit()
-print('Deleted:', conn.execute('SELECT changes()').fetchone()[0], 'rows')
-conn.close()
-"
+# Delete all journalist articles
+docker exec -it bitrx-news python3 -c "import sqlite3; conn = sqlite3.connect('/data/news.db'); conn.execute('DELETE FROM articles'); conn.commit(); print('Done'); conn.close()"
+
+# Restart to re-seed background articles
+docker compose restart news-website
 ```
 
 ---
 
 ## 3. Journalist Agent
 
-An autonomous AI agent that investigates crisis events and publishes news to The Daily Catch. Built on **LangChain** using a **ReAct** loop with **Chroma DB** for background knowledge. Listens to the event generator for incoming press events automatically.
+An autonomous AI agent that listens for press events and publishes news to The Daily Catch. Built on **LangChain** using a **ReAct** loop with **Chroma DB** for background knowledge.
 
 ### Personality
 
@@ -238,11 +252,11 @@ Event Generator fires a "press" event
         ↓
 1. search_knowledge  →  Query Chroma DB for background context
         ↓
-2. search_news       →  Check if story already covered on The Daily Catch
+2. search_news       →  Check if story already covered
         ↓
-3. send_email        →  Contact sources (CEO, COO, Regulator) for comment
+3. send_chat         →  Contact sources via internal chat (ceo, coo)
         ↓
-4. read_email        →  Check inbox for replies from sources
+4. read_chat         →  Check for replies (retries up to 3 times)
         ↓
 5. publish_article   →  POST finished article to The Daily Catch
         ↓
@@ -257,12 +271,12 @@ Event Generator fires a "press" event
 |---|---|---|
 | `search_knowledge` | Chroma DB | Find background via RAG |
 | `search_news` | News Website | Check existing coverage |
-| `send_email` | Email (other team) | Contact sources |
-| `read_email` | Email (other team) | Read replies |
+| `send_chat` | Internal Chat | Contact sources for comment |
+| `read_chat` | Internal Chat | Read replies from sources |
 | `publish_article` | News Website | Publish article |
-| `post_social` | BrightTweets (other team) | Share on social |
+| `post_social` | BrightTweets | Share headline on social |
 
-### Chroma DB knowledge base (pre-loaded on startup)
+### Chroma DB knowledge base
 
 | File | Content |
 |---|---|
@@ -271,27 +285,30 @@ Event Generator fires a "press" event
 | `happytuna_background.txt` | Company history, executives, production lines |
 | `happytuna_world_reference.txt` | All agents, all systems, crisis scenario |
 
-### How to run
-
+### How to run (Docker — recommended)
 ```bash
-# Terminal 1 — start Docker systems
+docker compose up --build
+```
+The journalist starts automatically and waits for press events.
+
+### How to run (local — for debugging)
+```bash
+# Start systems first
 docker compose up ntp news-website chroma
 
-# Terminal 2 — start event generator (other team's repo)
-cd customer-influencer-agents
-docker compose up event-generator
-
-# Terminal 3 — start journalist listener
-cd bitrx
+# Run listener locally
 py -m agents.journalist.listener
+
+# Or run manually with custom input
+py -m agents.journalist.main
 ```
 
-### Fire a test event
+### Fire test events
 ```cmd
-# Inject a single event
+# Single event
 curl -X POST http://localhost:8006/emit -H "Content-Type: application/json" -d "{\"tag\":\"press\",\"text\":\"HappyTuna salmonella confirmed - 3 consumers hospitalized\"}"
 
-# Or run the full scripted feed (5 events, Day 1 to Day 10)
+# Full scripted feed (5 events Day 1 to Day 10)
 curl -X POST http://localhost:8006/replay
 ```
 
@@ -321,7 +338,8 @@ NEWS_PUBLIC_URL=http://localhost:8003
 CHROMA_HOST=localhost
 CHROMA_PORT=8000
 SOCIAL_URL=http://localhost:3005
-EMAIL_URL=http://localhost:8010
+INTERNAL_CHAT_URL=http://localhost:8080
+JOURNALIST_AGENT_ID=JOURNALIST-1
 EVENT_GENERATOR_URL=http://localhost:8006
 
 # Docker (uncomment when running agents inside containers)
@@ -329,14 +347,13 @@ EVENT_GENERATOR_URL=http://localhost:8006
 # NEWS_URL=http://news-website:8003
 # CHROMA_HOST=chroma
 # SOCIAL_URL=http://social-network:3005
-# EMAIL_URL=http://email:8010
+# INTERNAL_CHAT_URL=http://internal-messaging:8080
 # EVENT_GENERATOR_URL=http://event-generator:8000
 
 # Journalist agent
 JOURNALIST_MODEL=gemini-2.5-flash
 JOURNALIST_TEMPERATURE=0.2
 JOURNALIST_MAX_STEPS=12
-
 
 # Regulator agent (coming soon)
 # REGULATOR_MODEL=gemini-2.5-flash
@@ -351,27 +368,27 @@ JOURNALIST_MAX_STEPS=12
 ```
 bitrx/
 ├── base/
-│   ├── agent_base.py        # Abstract agent interface
-│   ├── tool_base.py         # Abstract tool interface
-│   ├── tool_agent.py        # ReAct loop engine
-│   ├── memory_base.py       # Abstract memory interface
-│   └── retriever_base.py    # Abstract retriever interface
+│   ├── agent_base.py
+│   ├── tool_base.py
+│   ├── tool_agent.py
+│   ├── memory_base.py
+│   └── retriever_base.py
 │
 ├── services/
-│   ├── llm_client.py        # Google Gemini LLM wrapper
-│   ├── tool_executor.py     # Tool runner with retry + tracing
-│   ├── embedding_service.py # Google embedding model
-│   ├── document_store.py    # Chroma DB document store
-│   ├── rag_pipeline.py      # RAG pipeline
+│   ├── llm_client.py
+│   ├── tool_executor.py
+│   ├── embedding_service.py
+│   ├── document_store.py
+│   ├── rag_pipeline.py
 │   └── vector_memory_store.py
 │
 ├── agents/
 │   ├── journalist/
 │   │   ├── journalist_agent.py
 │   │   ├── prompts.py
-│   │   ├── main.py          # Manual run (for testing)
-│   │   ├── listener.py      # Event-driven run (production)
-│   │   ├── event_client.py  # SSE client from event generator team
+│   │   ├── main.py              # Manual run (testing)
+│   │   ├── listener.py          # Event-driven run (production)
+│   │   ├── event_client.py      # SSE client from event generator team
 │   │   ├── requirements.txt
 │   │   ├── Dockerfile
 │   │   ├── knowledge/
@@ -383,14 +400,15 @@ bitrx/
 │   │       ├── publish_article.py
 │   │       ├── search_news.py
 │   │       ├── search_knowledge.py
-│   │       ├── send_email.py
-│   │       ├── read_email.py
+│   │       ├── send_chat.py
+│   │       ├── read_chat.py
 │   │       └── post_social.py
+│   ├── board/               # Under development
 │   └── regulator/           # Coming soon
 │
 ├── systems/
-│   ├── ntp/                 # Simulation clock — FastAPI
-│   └── news-website/        # The Daily Catch — FastAPI + SQLite
+│   ├── ntp/
+│   └── news-website/
 │
 ├── docker-compose.yml
 ├── requirements.txt

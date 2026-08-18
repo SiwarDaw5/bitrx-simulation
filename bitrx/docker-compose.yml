@@ -1,6 +1,6 @@
 services:
 
-  # ── Shared infrastructure ──────────────────────────────────────────────────
+  # ── Our systems ────────────────────────────────────────────────────────────
 
   ntp:
     build: ./systems/ntp
@@ -41,7 +41,7 @@ services:
       - bitrx
     restart: unless-stopped
 
-  # ── Agents ─────────────────────────────────────────────────────────────────
+  # ── Our agents ─────────────────────────────────────────────────────────────
 
   journalist:
     build:
@@ -51,11 +51,15 @@ services:
     env_file:
       - .env
     environment:
-      - EVENT_GENERATOR_URL=http://event-generator:8000
+      # Internal URLs (Docker network)
       - NTP_URL=http://ntp:8001
       - NEWS_URL=http://news-website:8003
       - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      # Other teams (update when integration is ready)
+      - EVENT_GENERATOR_URL=http://event-generator:8000
       - SOCIAL_URL=http://social-network:3005
+      - INTERNAL_CHAT_URL=http://internal-messaging:8080
     depends_on:
       - ntp
       - news-website
@@ -71,6 +75,12 @@ services:
   #   container_name: bitrx-regulator
   #   env_file:
   #     - .env
+  #   environment:
+  #     - NTP_URL=http://ntp:8001
+  #     - NEWS_URL=http://news-website:8003
+  #     - CHROMA_HOST=chroma
+  #     - CHROMA_PORT=8000
+  #     - INTERNAL_CHAT_URL=http://internal-messaging:8080
   #   depends_on:
   #     - ntp
   #     - news-website
@@ -79,13 +89,37 @@ services:
   #     - bitrx
   #   restart: unless-stopped
 
-  # ── Other teams' services ───────────────────────────────────────────────────
-  # social-network:
-  # email:
-  # quality-lab:
-  # staff-portal:
-  # customer-support:
-  # internal-chat:
+  # ── Other teams' services (plug in during Sprint 4 integration) ────────────
+  #
+  # event-generator:         (Team 3 — customer-influencer-agents repo)
+  #   image: ...
+  #   ports:
+  #     - "8006:8000"
+  #   networks:
+  #     - bitrx
+  #
+  # social-network:          (Team 3 — customer-influencer-agents repo)
+  #   image: ...
+  #   ports:
+  #     - "3005:3005"
+  #   networks:
+  #     - bitrx
+  #
+  # internal-messaging:      (Team 2 — bitrix-internal-actors repo)
+  #   image: ...
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - bitrx
+  #
+  # email:                   (TBD)
+  #   image: ...
+  #   ports:
+  #     - "8010:8010"
+  #   networks:
+  #     - bitrx
+  #
+  # CEO, COO, Employee, Board agents — other teams
 
 volumes:
   news-data:
